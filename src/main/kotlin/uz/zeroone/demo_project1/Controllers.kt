@@ -1,8 +1,20 @@
 package uz.zeroone.demo_project1
 
+import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.context.support.ResourceBundleMessageSource
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
+import org.springframework.web.bind.annotation.ExceptionHandler
 
+@ControllerAdvice
+class ExceptionHandler(@Qualifier("errorMessageSource") private val erroorMessageSourse: ResourceBundleMessageSource){
+
+    @ExceptionHandler(DemoExceptionHandler::class)
+    fun handleException(exception: DemoExceptionHandler): ResponseEntity<BaseMessage> {
+        return ResponseEntity.badRequest().body(exception.getErrorMessage(erroorMessageSourse))
+    }
+
+}
 
 @RestController
 @RequestMapping("/api/v1/user")
@@ -161,6 +173,7 @@ class PaymentController(
 
     @GetMapping("/product/user/{userId}")
     fun getUserProduct(@PathVariable userId: Long, @RequestBody timeInterval: TimeIntervalDto ): ResponseEntity<*> {
+        println("Salom AAAAAAAAAAA")
         return paymentService.getProductData(userId, timeInterval)
     }
 

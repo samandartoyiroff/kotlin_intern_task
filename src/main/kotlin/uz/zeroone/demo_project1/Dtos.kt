@@ -149,8 +149,13 @@ data class PaymentResponseDto(
 }
 
 data class TimeIntervalDto(
-    val startDate: Date,
-    val endDate: Date,
+    val startDate: String, //pattern yyyy-MM-dd
+    val endDate: String,
+)
+
+data class BaseMessage(
+    val code: Int,
+    val message: String?
 )
 
 

@@ -3,6 +3,10 @@ package uz.zeroone.demo_project1
 import jakarta.transaction.Transactional
 import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Service
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 
 interface UserService {
     fun createUser(userCreateDto: UserCreateDto): ResponseEntity<*>
@@ -52,7 +56,7 @@ class UserServiceImpl(
     override fun createUser(userCreateDto: UserCreateDto): ResponseEntity<*> {
         userCreateDto.run {
             val user = userRepository.findByUsernameAndDeletedFalse(username)
-            if (user != null) throw RuntimeException("User already exists")
+            if (user != null) throw UserAlreadyExistsException()
             val toEntity = toEntity()
             userRepository.save(toEntity)
             return ResponseEntity.ok().body("User created successfully")
@@ -60,14 +64,14 @@ class UserServiceImpl(
     }
     @Transactional
     override fun updateUser(userUpdateDto: UserUpdateDto, userId: Long): ResponseEntity<*> {
-        val optUser = userRepository.findById(userId)?:throw RuntimeException("User not found")
+        val optUser = userRepository.findById(userId)?:throw UserNotFoundException()
         val user = optUser.get()
         userUpdateDto.run {
             username?.let {
                 val user1 = userRepository.findByUsernameAndDeletedFalse(username)
                 if (user1 != null) {
                     if (user.id != user1.id)
-                    throw RuntimeException("User already exists")
+                    throw UserAlreadyExistsException()
                 }
                 user.username=it
             }
@@ -87,7 +91,7 @@ class UserServiceImpl(
     }
     @Transactional
     override fun deleteUser(id: Long) {
-        userRepository.trash(id)?: throw RuntimeException("User not found")
+        userRepository.trash(id)?: throw UserNotFoundException()
     }
 
     override fun getAllUsersNotDeleted(): ResponseEntity<*> {
@@ -99,7 +103,7 @@ class UserServiceImpl(
     }
 
     override fun getUserById(id: Long): ResponseEntity<*> {
-        val user = userRepository.findByIdDeletedFalse(id) ?: throw RuntimeException("User not found")
+        val user = userRepository.findByIdDeletedFalse(id) ?: throw UserNotFoundException()
         user.run {
             return ResponseEntity.ok().body(UserResponseDto.toDto(this))
         }
@@ -115,14 +119,14 @@ class CategoryServiceImpl(
     override fun createCategory(categoryCreateDto: CategoryCreateDto): ResponseEntity<*> {
         categoryCreateDto.run {
             val category = categoryRepository.findByName(name)
-            if (category != null) throw RuntimeException("Category already exists")
+            if (category != null) throw CategoryAlreadyExistsException()
             categoryRepository.save(toEntity())
             return ResponseEntity.ok("Category created successfully")
         }
     }
     @Transactional
     override fun deleteCategory(id: Long) {
-        categoryRepository.trash(id)?: throw RuntimeException("Category not found")
+        categoryRepository.trash(id)?: throw CategoryNotFoundException()
     }
 
     override fun getAllCategoriesNotDeleted(): ResponseEntity<*> {
@@ -135,19 +139,19 @@ class CategoryServiceImpl(
     }
 
     override fun getCategoryById(id: Long): ResponseEntity<*> {
-        var category = categoryRepository.findById(id)?: throw RuntimeException("Category not found")
+        var category = categoryRepository.findById(id)?: throw CategoryNotFoundException()
         var toResponse = CategoryResponseDto.toResponse(category.get())
         return ResponseEntity.ok(toResponse)
     }
     @Transactional
     override fun updateCategory(id: Long, categoryUpdateDto: CategoryUpdateDto): ResponseEntity<*> {
         var optionalCategory = categoryRepository.findById(id)
-        var category = optionalCategory.get()?:throw RuntimeException("Category not found")
+        var category = optionalCategory.get()?:throw CategoryNotFoundException()
         categoryUpdateDto.run {
             name?.let {
                 var findByNameCategory = categoryRepository.findByName(it)
                 if (findByNameCategory!=null){
-                    if (category.id!=findByNameCategory.id) throw RuntimeException("Category already exists")
+                    if (category.id!=findByNameCategory.id) throw CategoryAlreadyExistsException()
                 }
                 category.name=it
             }
@@ -171,8 +175,8 @@ class ProductServiceImpl(
     override fun createProduct(productCreateDto: ProductCreateDto): ResponseEntity<*> {
         productCreateDto.run {
             val product = productRepository.findByName(name)
-            if (product != null) throw RuntimeException("Product already exists")
-            val optCategory = categoryRepository.findById(categoryId)?:throw RuntimeException("Category not found")
+            if (product != null) throw ProductAlreadyExistsException()
+            val optCategory = categoryRepository.findById(categoryId)?:throw CategoryNotFoundException()
             val category = optCategory.get()
             val product1 = toEntity(category)
             productRepository.save(product1)
@@ -182,7 +186,7 @@ class ProductServiceImpl(
 
     @Transactional
     override fun deleteProduct(id: Long) {
-        productRepository.trash(id)?: throw RuntimeException("Product not found")
+        productRepository.trash(id)?: throw ProductNotFoundException()
     }
 
     override fun getAllProductsNotDeleted(): ResponseEntity<*> {
@@ -194,19 +198,19 @@ class ProductServiceImpl(
     }
 
     override fun getProductById(id: Long): ResponseEntity<*> {
-        var product = productRepository.findByIdAndDeletedFalse(id)?:throw RuntimeException("Product not found")
+        var product = productRepository.findByIdAndDeletedFalse(id)?:throw ProductNotFoundException()
         return ResponseEntity.ok().body(product)
     }
 
     @Transactional
     override fun updateProduct(id: Long, productUpdateDto: ProductUpdateDto): ResponseEntity<*> {
-        var optProduct = productRepository.findByIdAndDeletedFalse(id)?:throw RuntimeException("Product not found")
+        var optProduct = productRepository.findByIdAndDeletedFalse(id)?:throw ProductNotFoundException()
         productUpdateDto.run {
 
             name?.let {
                 val product1 = productRepository.findByName(it)
                 if (product1!=null){
-                    if (product1.id != optProduct.id) throw RuntimeException("Product already exists")
+                    if (product1.id != optProduct.id) throw ProductAlreadyExistsException()
                 }
                 optProduct.name=it
             }
@@ -217,8 +221,8 @@ class ProductServiceImpl(
                 optProduct.price=it
             }
             categoryId?.let {
-                val optCategory = categoryRepository.findById(it)?:throw RuntimeException("Category not found")
-                val category = optCategory.get()?:throw RuntimeException("Category not found")
+                val optCategory = categoryRepository.findById(it)?:throw CategoryNotFoundException()
+                val category = optCategory.get()?:throw CategoryNotFoundException()
                 optProduct.category=category
             }
         }
@@ -242,14 +246,14 @@ class OrderServiceImpl(
     @Transactional
     override fun makeOrder(createOrderDto: CreateOrderDto): ResponseEntity<*> {
 
-        val optUser = userRepository.findById(createOrderDto.userId)?: throw RuntimeException("User not found")
-        val user = optUser.get()?:throw RuntimeException("User not found")
+        val optUser = userRepository.findById(createOrderDto.userId)?: throw UserNotFoundException()
+        val user = optUser.get()?:throw UserNotFoundException()
         createOrderDto.run {
             var order = Order(user,OrderStatus.PENDING)
             var totalPayment: Double = 0.0;
             orderRepository.save(order)
             for (orderItem in orderItems) {
-                val productOpt = productRepository.findById(orderItem.productId)?: throw RuntimeException("Product not found")
+                val productOpt = productRepository.findById(orderItem.productId)?: throw ProductNotFoundException()
                 val product = productOpt.get()
                 val orderItem1 =
                     OrderItem(order, product, orderItem.amount, product.price, orderItem.amount * product.price)
@@ -270,7 +274,7 @@ class OrderServiceImpl(
 
     @Transactional
     override fun declineOrder(orderId: Long): ResponseEntity<*> {
-        var order = orderRepository.findById(orderId)?: throw RuntimeException("Order not found")
+        var order = orderRepository.findById(orderId)?: throw OrderNotFoundException()
         if (order.isPresent){
             val order1 = order.get()
             order1.status=OrderStatus.CANCELLED
@@ -282,7 +286,7 @@ class OrderServiceImpl(
 
     @Transactional
     override fun changeStatus(orderId: Long, status: OrderStatus): ResponseEntity<*> {
-        val optOrder = orderRepository.findById(orderId)?: throw RuntimeException("Order not found")
+        val optOrder = orderRepository.findById(orderId)?: throw OrderNotFoundException()
         if (optOrder.isPresent){
             val order = optOrder.get()
             if (getIndex(status)>getIndex(order.status)){
@@ -329,8 +333,43 @@ class PaymentServiceImpl(
     }
 
     override fun getProductData(userId: Long, timeInterval: TimeIntervalDto): ResponseEntity<*> {
-        val productUserData = productRepository.getProductUserData(userId, timeInterval.startDate, timeInterval.endDate)
+        if(!isMatches(timeInterval)){
+            throw PatternNotMatchException()
+        }
+        val split1 = timeInterval.startDate.split("-")
+
+        val startYear = Integer.parseInt(split1[0])
+        val startMonth = Integer.parseInt(split1[1])
+        val startDay = Integer.parseInt(split1[2])
+
+        val split2 = timeInterval.endDate.split("-")
+
+        val endYear = Integer.parseInt(split2[0])
+        val endMonth = Integer.parseInt(split2[1])
+        val endDay = Integer.parseInt(split2[2])
+
+        val startDateTime = LocalDateTime.of(startYear, startMonth, startDay, 0, 0, 0) // Start of the day
+        val endDateTime = LocalDateTime.of(endYear, endMonth, endDay, 23, 59, 59) // End of the day
+        val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+
+        val productUserData = productRepository.getProductUserData(userId,startDateTime, endDateTime)
+        println("AASSDDFF")
+        println(productUserData)
         return ResponseEntity.ok().body(productUserData)
+    }
+
+    private fun isMatches(timeInterval: TimeIntervalDto): Boolean {
+
+        val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+        return try {
+            LocalDate.parse(timeInterval.startDate, formatter)
+            LocalDate.parse(timeInterval.endDate, formatter)
+            true
+        }
+        catch (e: DateTimeParseException){
+            false
+        }
+
     }
 
     override fun getProductUserCount(productId: Long): ResponseEntity<*> {

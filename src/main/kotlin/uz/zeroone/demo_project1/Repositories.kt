@@ -13,8 +13,7 @@ import org.springframework.data.jpa.repository.support.SimpleJpaRepository
 import org.springframework.data.repository.NoRepositoryBean
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Repository
-import java.security.Timestamp
-import java.util.*
+import java.time.LocalDateTime
 
 
 @NoRepositoryBean
@@ -91,20 +90,7 @@ interface CategoryRepository : BaseRepository<Category, Long> {
 interface ProductRepository : BaseRepository<Product, Long> {
     fun findByName(name: String) : Product?
 
-    @Query(nativeQuery = true, value = """
-        select
-    p.name as product_name,
-    sum(oi.quantity) as product_count,
-    count(o.*) as order_count,
-    sum(p.price*oi.quantity)
-    from users u
-    left join orders o on o.user_id=u.id
-    left join order_item oi on o.id = oi.order_id
-    left join product p on p.id=oi.product_id
-where u.id=:userId and o.created_date between :startDate and :endDate
-group by p.name, p.id
-    """)
-    fun getProductUserData(userId: Long, startDate: Date, endDate: Date): List<UserProductDataProjection>
+
     @Query(nativeQuery = true, value = """
         select
     count(distinct u.*) as user_count,
@@ -120,6 +106,26 @@ where p.id=:productId
 group by p.name, p.id
     """)
     fun getUserCountOrder(productId: Long) : List<ProductOrderUserCountProjection>
+    @Query(nativeQuery = true, value = """
+        SELECT
+    p.name AS product_name,
+    SUM(oi.quantity) AS product_count,
+    COUNT(o.*) AS order_count,
+    SUM(p.price * oi.quantity) AS total_sum
+FROM users u
+         LEFT JOIN orders o ON o.user_id = u.id
+         LEFT JOIN order_item oi ON o.id = oi.order_id
+         LEFT JOIN product p ON p.id = oi.product_id
+WHERE
+    o.user_id =:userId
+  AND o.order_date BETWEEN :startTime AND :endTime
+GROUP BY p.name, p.id;
+    """)
+        fun getProductUserData(
+        userId: Long,
+        startDate: LocalDateTime,
+        endDate: LocalDateTime
+    ): List<UserProductDataProjection>
 
 }
 
