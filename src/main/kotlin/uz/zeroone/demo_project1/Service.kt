@@ -35,8 +35,8 @@ interface ProductService {
 interface OrderService{
     fun makeOrder(createOrderDto: CreateOrderDto): ResponseEntity<*>
     fun showOrder(): ResponseEntity<*>
-    fun declineOrder(orderId: Long) : ResponseEntity<*>
-    fun changeStatus(orderId: Long, status: OrderStatus): ResponseEntity<*>
+    fun declineOrder(orderId: Long, userId: Long) : ResponseEntity<*>
+    fun changeStatus(orderId: Long, status: OrderStatus, userId: Long): ResponseEntity<*>
     fun geTUserOrders(userId: Long): ResponseEntity<*>
 }
 
@@ -83,6 +83,9 @@ class UserServiceImpl(
             }
             email?.let {
                 user.email=it
+            }
+            roleName?.let {
+                user.roleName=it
             }
             userRepository.save(user)
 
@@ -273,10 +276,20 @@ class OrderServiceImpl(
     }
 
     @Transactional
-    override fun declineOrder(orderId: Long): ResponseEntity<*> {
+    override fun declineOrder(orderId: Long, userId: Long): ResponseEntity<*> {
+        var userOptional = userRepository.findById(userId)?: throw UserNotFoundException()
+        var user1 = userOptional.get()?: throw UserNotFoundException()
         var order = orderRepository.findById(orderId)?: throw OrderNotFoundException()
+
+
         if (order.isPresent){
             val order1 = order.get()
+
+            order1.run {
+                if (user.id != userId) throw UserOrderChangeNotAllowedException()
+                if (!status.equals(OrderStatus.PENDING)) throw OrderStatusErrorException()
+            }
+
             order1.status=OrderStatus.CANCELLED
             orderRepository.save(order1)
             return ResponseEntity.ok("Order declined")
@@ -285,7 +298,12 @@ class OrderServiceImpl(
     }
 
     @Transactional
-    override fun changeStatus(orderId: Long, status: OrderStatus): ResponseEntity<*> {
+    override fun changeStatus(orderId: Long, status: OrderStatus, userId: Long): ResponseEntity<*> {
+        val findByIdOpt = userRepository.findById(userId)?: throw UserNotFoundException()
+        val user = findByIdOpt.get()?:throw UserNotFoundException()
+        user.run {
+            if (roleName.equals(RoleName.ROLE_USER) && !status.equals(OrderStatus.CANCELLED)) throw UserRoleNotAllowedException()
+        }
         val optOrder = orderRepository.findById(orderId)?: throw OrderNotFoundException()
         if (optOrder.isPresent){
             val order = optOrder.get()

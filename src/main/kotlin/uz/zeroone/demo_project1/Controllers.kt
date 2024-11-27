@@ -102,8 +102,8 @@ class OrderController(
     }
 
     @PatchMapping("/{orderId}")
-    fun declineOrder(@PathVariable orderId: Long): ResponseEntity<*> {
-        return orderService.declineOrder(orderId)
+    fun declineOrder(@PathVariable orderId: Long, @RequestParam userId: Long): ResponseEntity<*> {
+        return orderService.declineOrder(orderId, userId)
     }
     @GetMapping
     fun getOrders(): ResponseEntity<*> {
@@ -111,8 +111,8 @@ class OrderController(
     }
 
     @PutMapping("/{orderId}")
-    fun changeStatus(@RequestParam orderStatus: OrderStatus, @PathVariable orderId: Long): ResponseEntity<*> {
-        return orderService.changeStatus(orderId, orderStatus)
+    fun changeStatus(@RequestParam orderStatus: OrderStatus, @RequestParam userId: Long, @PathVariable orderId: Long): ResponseEntity<*> {
+        return orderService.changeStatus(orderId, orderStatus, userId)
     }
 
     @GetMapping("/user/{userId}")

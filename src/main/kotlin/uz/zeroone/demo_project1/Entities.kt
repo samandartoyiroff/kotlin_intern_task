@@ -15,7 +15,8 @@ class User(
     @Column(nullable = false) var fullname: String,
     @Column(nullable = false) var password: String,
     @Column(nullable = false) var email: String,
-    @Column(nullable = true) var address: String
+    @Column(nullable = true) var address: String,
+    @Column(nullable = false) @Enumerated(EnumType.STRING) var roleName: RoleName
 ):BaseEntity()
 
 @Entity

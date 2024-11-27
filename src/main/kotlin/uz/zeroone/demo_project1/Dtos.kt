@@ -1,27 +1,34 @@
 package uz.zeroone.demo_project1
 
+import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.NotNull
 import java.security.Timestamp
 import java.util.*
-
-data class UserCreateDto(
-    val username: String,
-    val password: String,
-    val fullname: String,
-    val email: String,
-    val address: String
-){
-    fun toEntity(): User{
-        return User(username, password, fullname, email, address)
-    }
-}
 
 data class UserUpdateDto(
     val username: String,
     val password: String,
     val fullname: String,
     val email: String,
+    val roleName: RoleName,
     val address: String
-)
+){
+
+}
+
+data class UserCreateDto(
+    @field:NotBlank(message = "cannot be blank") val username: String,
+    @field:NotBlank(message = "cannot be blank") val password: String,
+    @field:NotBlank(message = "cannot be blank") val fullname: String,
+    @field:NotBlank(message = "cannot be blank") val email: String,
+    @field:NotNull(message = "cannot be null") val roleName: RoleName,
+    @field:NotBlank(message = "cannot be blank") val address: String
+
+){
+    fun toEntity(): User{
+        return User(username, password, fullname, email, address, roleName)
+    }
+}
 
 data class UserResponseDto(
     val id: Long?,
@@ -41,8 +48,8 @@ data class UserResponseDto(
 }
 
 data class CategoryCreateDto(
-    val name: String,
-    val description: String,
+    @field:NotBlank(message = "cannot be blank")val name: String,
+    @field:NotBlank(message = "cannot be blank")val description: String,
 ) {
     fun toEntity(): Category {
         return Category(name, description)
@@ -68,11 +75,11 @@ data class CategoryResponseDto(
 }
 
 data class ProductCreateDto(
-    val name: String,
-    val description: String,
-    val price: Double,
-    val stockAmount: Int,
-    val categoryId: Long
+    @field:NotBlank(message = "cannot be blank")val name: String,
+    @field:NotBlank(message = "cannot be blank")val description: String,
+    @field:NotNull(message = "cannot be null")val price: Double,
+    @field:NotBlank(message = "cannot be null")val stockAmount: Int,
+    @field:NotBlank(message = "cannot be null")val categoryId: Long
 ) {
     fun toEntity(category: Category): Product {
         return Product(name, description, price, stockAmount,category)
@@ -103,9 +110,9 @@ data class ProductResponseDto(
 }
 
 data class CreateOrderDto(
-    val userId: Long,
+    @field:NotNull(message = "cannot be null")val userId: Long,
 
-    val payType: PaymentMethod,
+    @field:NotNull(message = "cannot be null")val payType: PaymentMethod,
     val orderItems: List<OrderItemDto>
 
 )

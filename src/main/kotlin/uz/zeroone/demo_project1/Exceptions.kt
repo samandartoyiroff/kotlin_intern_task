@@ -70,4 +70,22 @@ class PatternNotMatchException: DemoExceptionHandler(){
     }
 }
 
+class UserRoleNotAllowedException: DemoExceptionHandler(){
+    override fun errorCode(): ErrorCode {
+        return ErrorCode.USER_ROLE_NOT_ALLOWED
+    }
+}
+
+class UserOrderChangeNotAllowedException: DemoExceptionHandler(){
+    override fun errorCode(): ErrorCode {
+        return ErrorCode.USER_ORDER_CHANGE_NOT_ALLOWED
+    }
+}
+
+class OrderStatusErrorException: DemoExceptionHandler(){
+    override fun errorCode(): ErrorCode {
+        return ErrorCode.ORDER_STATUS_ERROR
+    }
+}
+
 
